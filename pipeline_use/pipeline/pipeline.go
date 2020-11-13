@@ -52,7 +52,7 @@ func (f *syncFlag) Done() bool {
 
 type pipelineThread struct {
 	sigs         []chan struct{} //
-	chanExit     chan struct{}   // 某工序逻辑结束
+	chanExit     chan struct{}   // wait完整一个流水线的结束
 	interrupt    SyncFlag        // 中断操作
 	setInterrupt func()          // 关闭syncFlag的通道，只执行一次（sync.Once.Do）
 	err          error
@@ -102,8 +102,13 @@ func (p *Pipeline) Async(works ...func() error) bool {
 	p.prevThd = thisThd
 	p.mtx.Unlock()
 
+	// 占用某工序的坑位
 	lock := func(idx int) bool {
-		log.Printf("idx[%v] ==> [ len:%v , cap:%v ]", idx, len(p.workerChans[idx]), cap(p.workerChans[idx]))
+		len := len(p.workerChans[idx])
+		cap := cap(p.workerChans[idx])
+		if len == cap {
+			log.Printf("idx[%v] ==> [ len:%v , cap:%v ]", idx, len, cap)
+		}
 		select {
 		// 如果不堵塞，就说明该工序还空闲
 		case p.workerChans[idx] <- struct{}{}: //get lock
@@ -117,10 +122,6 @@ func (p *Pipeline) Async(works ...func() error) bool {
 	go func() {
 		var err error
 		for i, work := range works {
-			// ？？？这个跟chanExit有什么区别
-			// sigs ： 开始信号？
-			// workerChans ： 结束信号？
-			close(thisThd.sigs[i]) //signal next thread
 			if work != nil {
 				err = work()
 			}

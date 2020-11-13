@@ -9,6 +9,11 @@ import (
 
 // Lesson From https://segmentfault.com/a/1190000014788594
 // modify/learn from https://github.com/jamesblockk/Start-Go/blob/6bf886f9c72998de2427f3797be2c9c18f5a6b4a/patten/pipeline/main.go
+/*
+	流水线：
+	* 通过channel容量来控制某工序的并发数
+	* 流水线各工序的数据传递直接通过全局变量操作【存在数据竞争？】
+*/
 
 func loadCheckpoint() int {
 	return 1
@@ -47,7 +52,7 @@ func main() {
 	t1 := time.Now() //   測試運行時間用的
 
 	i := 0
-	for i < 10 {
+	for i < 1 {
 		startPipeLine()
 		i++
 	}
